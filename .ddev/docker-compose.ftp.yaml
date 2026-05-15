@@ -1,0 +1,47 @@
+version: '3.6'
+
+services:
+  ftp:
+    container_name: ddev-${DDEV_SITENAME}-ftp
+    image: stilliard/pure-ftpd
+    ports:
+      - "0.0.0.0:21:21"
+      - "0.0.0.0:30000-30009:30000-30009"
+    volumes:
+      # Almacenamiento de archivos de empleados
+      - ./data:/home/ftpusers
+      # INCORPORADO: Inyectamos nuestro mapeo de consultas personalizado para Laravel
+      - ./db/mysql.conf:/etc/pure-ftpd/db/mysql.conf
+    environment:
+      PUBLICHOST: "ftp.utrecar.com"
+      MIN_PASV_PORT: 30000
+      MAX_PASV_PORT: 30009
+      # Forzamos la autenticación exclusiva por MySQL pasando olímpicamente del archivo puredb corrupto
+      ADDED_FLAGS: "-d -c 50 -C 10 -R -l mysql:/etc/pure-ftpd/db/mysql.conf"
+
+      # Conexión directa al contenedor de Base de Datos de admin-platform
+      MYSQL_FILE: "/etc/pure-ftpd/db/mysql.conf"
+      DB_HOST: "ddev-admin-platform-db"
+      DB_USER: "db"
+      DB_PASS: "db"
+      DB_NAME: "db"
+    restart: always
+
+    # Vinculamos el servicio a las redes para que tenga línea directa con el MariaDB de la web
+    networks:
+      - default
+      - ddev-utrecar-ftp_default
+      - ddev_default
+
+    labels:
+      com.ddev.site-name: ${DDEV_SITENAME}
+
+# Definición correcta de las redes externas para el motor de Docker
+networks:
+  ddev_default:
+    external: true
+  ddev-utrecar-ftp_default:
+    external: true
+  default:
+    external: true
+    name: ddev_default
